@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<executable>
+  <category>TubeTK</category>
+  <title>Compute Aiflow Resistance (TubeTK)</title>
+  <description>Compute Airflow Resistance</description>
+  <version>0.1.0.$Revision: 2104 $(alpha)</version>
+  <documentation-url>http://public.kitware.com/Wiki/TubeTK</documentation-url>
+  <license>Apache 2.0</license>
+  <contributor>Deepak Roy Chittajallu (Kitware)</contributor>
+  <acknowledgements>This work is part of the TubeTK project at Kitware.</acknowledgements>
+  <parameters>
+    <label>IO</label>
+    <description>Input/output parameters.</description>
+    <file>
+      <name>inputTREFile</name>
+      <label>Input Centerline Tre File</label>
+      <channel>input</channel>
+      <index>0</index>
+      <description>Input centerline TRE file</description>
+    </file>
+    <image>
+      <name>tubeMaskFile</name>
+      <label>Tube Segmentation Mask</label>
+      <channel>input</channel>
+      <index>1</index>
+      <description>Binary tube segmentation mask</description>
+    </image>
+    <file>
+      <name>outputTREFile</name>
+      <label>Output TRE File</label>
+      <channel>output</channel>
+      <index>2</index>
+      <description>Output TRE file with radius of each centerline point set using the distance map</description>
+    </file>
+    <double>
+      <name>mu</name>
+      <label>mu</label>
+      <description>viscosity</description>
+      <longflag>mu</longflag>
+      <default>20</default>
+    </double>
+  </parameters>
+</executable>
