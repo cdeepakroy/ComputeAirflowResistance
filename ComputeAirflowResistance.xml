@@ -11,26 +11,19 @@
   <parameters>
     <label>IO</label>
     <description>Input/output parameters.</description>
-    <file>
-      <name>inputTREFile</name>
-      <label>Input Centerline Tre File</label>
-      <channel>input</channel>
-      <index>0</index>
-      <description>Input centerline TRE file</description>
-    </file>
     <image>
       <name>tubeMaskFile</name>
       <label>Tube Segmentation Mask</label>
       <channel>input</channel>
-      <index>1</index>
+      <index>0</index>
       <description>Binary tube segmentation mask</description>
     </image>
     <file>
       <name>outputTREFile</name>
-      <label>Output TRE File</label>
+      <label>Output Centerline TRE File</label>
       <channel>output</channel>
-      <index>2</index>
-      <description>Output TRE file with radius of each centerline point set using the distance map</description>
+      <index>3</index>
+      <description>Output centerline TRE file with radius of each centerline point set using the distance map</description>
     </file>
     <double>
       <name>mu</name>
@@ -40,4 +33,64 @@
       <default>20</default>
     </double>
   </parameters>
+  <parameters>
+      <label>Centerline Extraction</label>
+      <description>Centerline extraction parameters</description>
+      <point multiple="true" coordinateSystem="ras">
+        <name>startPoint</name>
+        <label>Start Point</label>
+        <description>Start Point</description>
+        <longflag>startPoint</longflag>
+      </point>
+      <point multiple="true" coordinateSystem="ras">
+        <name>intermediatePoints</name>
+        <label>Intermediate Points (Optional)</label>
+        <description>Intermediate Points</description>
+        <longflag>intermediatePoints</longflag>
+      </point>
+      <point multiple="true" coordinateSystem="ras">
+        <name>endPoint</name>
+        <label>End Point</label>
+        <description>End Point</description>
+        <longflag>endPoint</longflag>
+      </point>
+      <string-enumeration>
+        <name>optimizer</name>
+        <label>Optimizer</label>
+        <description>Optimizer to extract path</description>
+        <longflag>optimizer</longflag>
+        <default>Regular_Step_Gradient_Descent</default>
+        <element>Gradient_Descent</element>
+        <element>Iterate_Neighborhood</element>
+        <element>Regular_Step_Gradient_Descent</element>
+      </string-enumeration>
+      <double>
+        <name>terminationValue</name>
+        <label>Termination Value</label>
+        <description>Minimum value to reach before Optimizer is terminated</description>
+        <longflag>terminationValue</longflag>
+        <default>2.0</default>
+      </double>
+      <integer>
+        <name>numberOfIterations</name>
+        <label>Number of Iterations</label>
+        <description>Maximum number of optimizer iterations. Only used with Gradient Descent and Regular Step Gradient Descent optimizers</description>
+        <longflag>numberOfIterations</longflag>
+        <default>30000</default>
+      </integer>
+      <double>
+        <name>stepLengthFactor</name>
+        <label>Step Length Factor</label>
+        <description>Optimizer Step Size factor. Only used with Iterate Neighborhood and Regular Step Gradient Descent optimizers</description>
+        <longflag>stepLengthFactor</longflag>
+        <default>0.1</default>
+      </double>
+      <double>
+        <name>stepLengthRelax</name>
+        <label>Step Length Relax</label>
+        <description>Set Relaxation Factor. Only used with Regular Step Gradient Descent optimizer</description>
+        <longflag>stepLengthRelax</longflag>
+        <default>0.999</default>
+      </double>
+    </parameters>
 </executable>

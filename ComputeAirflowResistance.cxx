@@ -23,6 +23,7 @@
 
 #include "tubeMessage.h"
 #include "tubeCLIProgressReporter.h"
+#include "itktubeSegmentTubesUsingMinimalPathFilter.h"
 
 #include "itkDanielssonDistanceMapImageFilter.h"
 #include "itkGroupSpatialObject.h"
@@ -40,6 +41,7 @@
 
 #include <iostream>
 #include <cmath>
+#include <vector>
 
 #include "ComputeAirflowResistanceCLP.h"
 
@@ -87,35 +89,6 @@ int DoIt( int argc, char * argv[] )
   // The timeCollector to perform basic profiling of algorithmic components
   itk::TimeProbesCollectorBase timeCollector;
 
-  // Load TRE File
-  tubeStandardOutputMacro( << "\n>> Loading TRE File" );
-
-  typedef itk::SpatialObjectReader< VDimension > TubesReaderType;
-  typedef itk::GroupSpatialObject< VDimension >  TubeGroupType;
-
-  timeCollector.Start( "Loading Input TRE File" );
-
-  typename TubesReaderType::Pointer tubeFileReader = TubesReaderType::New();
-
-  try
-    {
-    tubeFileReader->SetFileName( inputTREFile.c_str() );
-    tubeFileReader->Update();
-    }
-  catch( itk::ExceptionObject & err )
-    {
-    tube::ErrorMessage( "Error loading TRE File: "
-      + std::string( err.GetDescription() ) );
-    timeCollector.Report();
-    return EXIT_FAILURE;
-    }
-
-  typename TubeGroupType::Pointer tubeGroup = tubeFileReader->GetGroup();
-
-  timeCollector.Stop( "Loading Input TRE File" );
-  progress = 0.1; // At about 10% done
-  progressReporter.Report( progress );
-
   // Load tube segmentation mask
   tubeStandardOutputMacro( << "\n>> Loading tube segmentation mask" );
 
@@ -141,7 +114,7 @@ int DoIt( int argc, char * argv[] )
     }
 
   timeCollector.Stop( "Loading tube segmentation mask" );
-  progress = 0.2; // At about 20% done
+  progress = 0.1;
   progressReporter.Report( progress );
 
   // compute euclidean distance map of the intensity-negative of tube mask
@@ -172,8 +145,103 @@ int DoIt( int argc, char * argv[] )
   // WriteImage< DistanceMapType >(distanceMapFilter->GetOutput(), "dmap.mha");
 
   timeCollector.Stop( "Computing distance map of inverted tube mask" );
-  progress = 0.6; // At about 60% done
+  progress = 0.4;
   progressReporter.Report( progress );
+
+  // Extract centerline
+  tubeStandardOutputMacro( << "\n>> Extracting centerline" );
+
+  timeCollector.Start( "Extracting centerline" );
+
+  typedef itk::tube::SegmentTubesUsingMinimalPathFilter< VDimension,
+    DistanceMapPixelType >                    CenterlineExtractionFilterType;
+  typedef itk::Point< double, VDimension >    PointType;
+
+  typename CenterlineExtractionFilterType::Pointer centerlineFilter =
+    CenterlineExtractionFilterType::New();
+
+  centerlineFilter->SetSpeedImage( distanceMapFilter->GetOutput() );
+
+  if( startPoint.size() == 1 )
+    {
+    PointType startPathPoint;
+
+    for( unsigned int i = 0; i < VDimension; i++ )
+      {
+      startPathPoint[i] = startPoint[0][1];
+      }
+    centerlineFilter->SetStartPoint( startPathPoint );
+    }
+  else
+    {
+    tubeErrorMacro(
+      << "Error: start point must be provided and only one start point is allowed" );
+    timeCollector.Stop( "Extracting centerline" );
+    timeCollector.Report();
+    return EXIT_FAILURE;
+    }
+
+  if( endPoint.size() == 1 )
+    {
+    PointType endPathPoint;
+
+    for( unsigned int i = 0; i < VDimension; i++ )
+      {
+      endPathPoint[i] = endPoint[0][1];
+      }
+    centerlineFilter->SetEndPoint( endPathPoint );
+    }
+  else
+    {
+    tubeErrorMacro(
+      << "Error: end point must be provided and only one end point is allowed" );
+    timeCollector.Stop( "Extracting centerline" );
+    timeCollector.Report();
+    return EXIT_FAILURE;
+    }
+
+  if( intermediatePoints.size() > 0 )
+    {
+    std::vector< PointType > intermediatePathPoints;
+
+    for( unsigned int i = 0; i < intermediatePoints.size(); i++ )
+      {
+      PointType curPathPoint;
+      for( unsigned int j = 0; j < VDimension ; j++ )
+        {
+        curPathPoint[j] = intermediatePoints[i][j];
+        }
+      intermediatePathPoints.push_back( curPathPoint );
+      }
+
+    centerlineFilter->SetIntermediatePoints( intermediatePathPoints );
+    }
+
+  centerlineFilter->SetOptimizationMethod( optimizer );
+  centerlineFilter->SetOptimizerTerminationValue( terminationValue );
+  centerlineFilter->SetOptimizerNumberOfIterations( numberOfIterations );
+  centerlineFilter->SetOptimizerStepLengthFactor( stepLengthFactor );
+  centerlineFilter->SetOptimizerStepLengthRelax( stepLengthRelax );
+
+  try
+    {
+    centerlineFilter->Update();
+    }
+  catch( itk::ExceptionObject & err )
+    {
+    tube::ErrorMessage( "Error extracting centerline: "
+      + std::string(err.GetDescription()) );
+    timeCollector.Report();
+    return EXIT_FAILURE;
+    }
+
+  timeCollector.Stop( "Extracting centerline" );
+  progress = 0.7;
+  progressReporter.Report( progress );
+
+  typedef typename CenterlineExtractionFilterType::InputSpatialObjectType
+    TubeGroupType;
+  typename TubeGroupType::Pointer tubeGroup = centerlineFilter->GetOutput();
 
   // Set tube radius using distance map
   tubeStandardOutputMacro(
@@ -241,9 +309,12 @@ int DoIt( int argc, char * argv[] )
           }
         dL = sqrt( dL );
 
-        double r = (curRadiusPhysp + prevRadiusPhysp) / 2.0;
+        double r = 0.5 * (curRadiusPhysp + prevRadiusPhysp);
 
         airflow_resistance += c * ( dL / pow(r, 4) );
+
+        prevPoint = curPoint;
+        prevRadiusPhysp = curRadiusPhysp;
         }
       }
     curTube->SetPoints( tubePointList );

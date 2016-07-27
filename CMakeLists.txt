@@ -40,6 +40,7 @@ SEMMacroBuildCLI(
   TARGET_LIBRARIES
     ${ITK_LIBRARIES}
     ${TubeTK_Libraries}
+    MinimalPathExtraction TubeTKCommon TubeTKSegmentation TubeTKNumerics
   EXECUTABLE_ONLY
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
