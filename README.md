@@ -9,10 +9,20 @@ Computes airflow resistance of each tube
 
 ```
 ComputeAirflowResistance  [--returnparameterfile <std::string>]
-                         [--processinformationaddress <std::string>]
-                         [--xml] [--echo] [--mu <double>] [--]
-                         [--version] [-h] <std::string> <std::string>
-                         <std::string>
+                           [--processinformationaddress <std::string>]
+                           [--xml] [--echo] [--stepLengthRelax
+                           <double>] [--stepLengthFactor <double>]
+                           [--numberOfIterations <int>]
+                           [--terminationValue <double>] [--optimizer
+                           <Gradient_Descent|Iterate_Neighborhood
+                           |Regular_Step_Gradient_Descent>] [--endPoint
+                           <std::vector<std::vector<float> >>] ... 
+                           [--intermediatePoints
+                           <std::vector<std::vector<float> >>] ... 
+                           [--startPoint
+                           <std::vector<std::vector<float> >>] ... 
+                           [--mu <double>] [--] [--version] [-h]
+                           <std::string> <std::string>
 
 
 Where: 
@@ -32,6 +42,36 @@ Where:
    --echo
      Echo the command line arguments (default: 0)
 
+   --stepLengthRelax <double>
+     Set Relaxation Factor. Only used with Regular Step Gradient Descent
+     optimizer (default: 0.999)
+
+   --stepLengthFactor <double>
+     Optimizer Step Size factor. Only used with Iterate Neighborhood and
+     Regular Step Gradient Descent optimizers (default: 0.1)
+
+   --numberOfIterations <int>
+     Maximum number of optimizer iterations. Only used with Gradient
+     Descent and Regular Step Gradient Descent optimizers (default: 30000)
+
+   --terminationValue <double>
+     Minimum value to reach before Optimizer is terminated (default: 2)
+
+   --optimizer <Gradient_Descent|Iterate_Neighborhood
+      |Regular_Step_Gradient_Descent>
+     Optimizer to extract path (default: Regular_Step_Gradient_Descent)
+
+   --endPoint <std::vector<std::vector<float> >>  (accepted multiple times)
+     End Point
+
+   --intermediatePoints <std::vector<std::vector<float> >>  (accepted
+      multiple times)
+     Intermediate Points
+
+   --startPoint <std::vector<std::vector<float> >>  (accepted multiple
+      times)
+     Start Point
+
    --mu <double>
      viscosity (default: 20)
 
@@ -45,19 +85,18 @@ Where:
      Displays usage information and exits.
 
    <std::string>
-     (required)  Input centerline TRE file
-
-   <std::string>
      (required)  Binary tube segmentation mask
 
    <std::string>
-     (required)  Output TRE file with radius of each centerline point set
-     using the distance map
+     (required)  Output centerline TRE file with radius of each centerline
+     point set using the distance map
 
 
-   Description: Computes Airflow Resistance of Each Tube
+   Description: Compute Airflow Resistance
 
    Author(s): Deepak Roy Chittajallu (Kitware)
+
+   Acknowledgements: This work is part of the TubeTK project at Kitware.
 ```
 
 
