@@ -64,6 +64,23 @@ void WriteImage( typename ImageType::Pointer im, const std::string & name )
   writer->Update();
 }
 
+//----------------------------------------------------------------------------
+// Convert a list of point to ITK while converting them from RAS to LPS.
+// Code taken from FiducialRegistration CLI
+//
+itk::Point< double, 3 >
+ConvertPointFromRASToLPS(const itk::Point< double, 3 > & ptRAS)
+{
+  itk::Point< double, 3 > ptLPS;
+
+  // convert RAS to LPS
+  ptLPS[0] = -ptRAS[0];
+  ptLPS[1] = -ptRAS[1];
+  ptLPS[2] = ptRAS[2];
+
+  return ptLPS;
+}
+
 template< class TPixel, unsigned int VDimension >
 int DoIt( int argc, char * argv[] )
 {
@@ -168,7 +185,12 @@ int DoIt( int argc, char * argv[] )
 
     for( unsigned int i = 0; i < VDimension; i++ )
       {
-      startPathPoint[i] = startPoint[0][1];
+      startPathPoint[i] = startPoint[0][i];
+      }
+
+    if( VDimension == 3 )
+      {
+      startPathPoint = ConvertPointFromRASToLPS( startPathPoint );
       }
     centerlineFilter->SetStartPoint( startPathPoint );
     }
@@ -187,8 +209,14 @@ int DoIt( int argc, char * argv[] )
 
     for( unsigned int i = 0; i < VDimension; i++ )
       {
-      endPathPoint[i] = endPoint[0][1];
+      endPathPoint[i] = endPoint[0][i];
       }
+
+    if( VDimension == 3 )
+      {
+      endPathPoint = ConvertPointFromRASToLPS( endPathPoint );
+      }
+
     centerlineFilter->SetEndPoint( endPathPoint );
     }
   else
@@ -207,10 +235,17 @@ int DoIt( int argc, char * argv[] )
     for( unsigned int i = 0; i < intermediatePoints.size(); i++ )
       {
       PointType curPathPoint;
+
       for( unsigned int j = 0; j < VDimension ; j++ )
         {
         curPathPoint[j] = intermediatePoints[i][j];
         }
+
+      if( VDimension == 3 )
+        {
+        curPathPoint = ConvertPointFromRASToLPS( curPathPoint );
+        }
+
       intermediatePathPoints.push_back( curPathPoint );
       }
 
@@ -281,6 +316,11 @@ int DoIt( int argc, char * argv[] )
     TubePointListType tubePointList = curTube->GetPoints();
 
     double airflow_resistance = 0;
+    double tubeLength = 0;
+    double minRadius = 0;
+    double maxRadius = 0;
+    double meanRadius = 0;
+
     double c = 8.0 * mu / M_PI;
 
     for( unsigned int ptId = 0; ptId < tubePointList.size(); ptId++ )
@@ -296,6 +336,18 @@ int DoIt( int argc, char * argv[] )
       double curRadiusPhysp =
         distanceMapInterpolator->EvaluateAtContinuousIndex( curPoint );
 
+      if( curRadiusPhysp < minRadius )
+        {
+        minRadius = curRadiusPhysp;
+        }
+
+      if( curRadiusPhysp > maxRadius )
+        {
+        maxRadius = curRadiusPhysp;
+        }
+
+      meanRadius += curRadiusPhysp;
+
       // Radius in TRE file is expected to be in continuous index space
       tubePointList[ptId].SetRadius( curRadiusPhysp / spacing[0] );
 
@@ -309,18 +361,29 @@ int DoIt( int argc, char * argv[] )
           }
         dL = sqrt( dL );
 
+        tubeLength += dL;
+
         double r = 0.5 * (curRadiusPhysp + prevRadiusPhysp);
 
         airflow_resistance += c * ( dL / pow(r, 4) );
-
-        prevPoint = curPoint;
-        prevRadiusPhysp = curRadiusPhysp;
         }
+      else
+        {
+        minRadius = curRadiusPhysp;
+        maxRadius = curRadiusPhysp;
+        }
+
+      prevPoint = curPoint;
+      prevRadiusPhysp = curRadiusPhysp;
       }
     curTube->SetPoints( tubePointList );
 
-    std::cout << "TubeID = " << curTube->GetId();
-    std::cout << "\tairflow_resistance = " << airflow_resistance << std::endl;
+    std::cout << "TubeID = " << curTube->GetId() << std::endl
+              << "\tairflow_resistance = " << airflow_resistance << std::endl
+              << "\ttube_length = " << tubeLength << std::endl
+              << "\tmin_radius = " << minRadius << std::endl
+              << "\tmax_radius = " << maxRadius << std::endl
+              << "\tmean_radius = " << meanRadius << std::endl;
     }
 
   timeCollector.Stop( "Setting tube radius using distance map" );
